@@ -1,0 +1,956 @@
+{
+  "name": "Multi-Label Gmail to Google Sheets & Drive Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "label:Receipts",
+          "readStatus": "both"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "id": "2c63e809-4303-4054-89c4-f6c615547822",
+      "name": "Gmail Trigger - Receipts",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2224,
+        1440
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "657hDyiCeeZ6f8Dv",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "label:Contracts",
+          "readStatus": "both"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "id": "6b7f7293-b9ee-4523-8a8d-153cf917ee0c",
+      "name": "Gmail Trigger - Contracts",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2224,
+        1600
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "657hDyiCeeZ6f8Dv",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: { ...$json, label: 'Invoices' },\n  binary: $binary\n};"
+      },
+      "id": "ca28f5c0-1a45-4956-879e-e8fb77fe213c",
+      "name": "Tag Invoices",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2000,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: { ...$json, label: 'Receipts' },\n  binary: $binary\n};"
+      },
+      "id": "7dc54dc8-96a9-4223-bc31-98f259584720",
+      "name": "Tag Receipts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2000,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: { ...$json, label: 'Contracts' },\n  binary: $binary\n};"
+      },
+      "id": "d7f12836-0f19-4346-bbe5-452a02d9c818",
+      "name": "Tag Contracts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2000,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "401d4a0e-24a6-45cd-9476-6a2667b06c98",
+      "name": "Merge - Combine Labeled Emails",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -1792,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const fromObj = ($json.from && $json.from.value && $json.from.value[0]) || {};\nconst senderNameRaw = fromObj.name || fromObj.address || '';\nconst senderEmail = fromObj.address || '';\n\nconst subject = $json.subject || '(no subject)';\nconst rawDate = $json.date || new Date().toISOString();\n// Convert to Philippine time (Asia/Manila, UTC+8) so folder dates match local calendar day\nconst dateReceived = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date(rawDate));\n\nfunction sanitize(str) {\n  return String(str).replace(/[\\\\/:*?\"<>|]/g, '-').trim() || 'Unknown';\n}\n\nreturn {\n  json: {\n    senderName: sanitize(senderNameRaw),\n    senderEmail,\n    subject,\n    dateReceived,\n    label: sanitize($json.label),\n    attachmentCount: Object.keys($binary || {}).length\n  },\n  binary: $binary\n};"
+      },
+      "id": "0d5b29a5-f861-4864-9871-acb84626e489",
+      "name": "Extract Sender & Label Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1r3PEzvA6geWtYVOoZV37VK-Ridy2AnU5WBxTPbvprW4",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DgKxCo-Cs_L9_A1spnG9Rbdh9kuL0NBjArj31Pg0Vrk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Sender Name": "={{ $json.senderName }}",
+            "Sender Email": "={{ $json.senderEmail }}",
+            "Subject": "={{ $json.subject }}",
+            "Date Received": "={{ $json.dateReceived }}",
+            "Label": "={{ $json.label }}",
+            "Attachment Count": "={{ $json.attachmentCount }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Email",
+              "displayName": "Sender Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Received",
+              "displayName": "Date Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Label",
+              "displayName": "Label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Attachment Count",
+              "displayName": "Attachment Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4c1dd1cb-0a10-40bb-a7a5-ea259910931e",
+      "name": "Append to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1568,
+        1600
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ZdYM1EY9iGiqcrGU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.attachmentCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "60a15676-e840-4807-9c07-201046d7e7c4",
+      "name": "Has Attachments?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1568,
+        1296
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a422418d-7267-4862-be4c-32208f143c8d",
+      "name": "No Attachments - End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        1504
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $json.label }}",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1VYLk_XSq6Rx2aR1KW1eHwZ2o7BJxQvnU",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "id": "5e179a7a-839e-49c5-a4d4-67c4b8806e70",
+      "name": "Search Label Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1248,
+        1200
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "95199087-3fa6-42e0-a04d-a497d1effc70",
+      "name": "Label Folder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Extract Sender & Label Info').item.json.label }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1VYLk_XSq6Rx2aR1KW1eHwZ2o7BJxQvnU",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "8faca8a0-61df-4225-bad2-7b92698ddcbe",
+      "name": "Create Label Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -624,
+        1328
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $('Extract Sender & Label Info').item.json.dateReceived }}",
+        "filter": {
+          "folderId": {
+            "mode": "id",
+            "value": "={{ $json.id }}"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "id": "743ea52b-449a-42c7-95da-099894389e35",
+      "name": "Search Date Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        1216
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond3",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1aa2b004-98a0-448c-bffe-ad1e1a3d1353",
+      "name": "Date Folder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Extract Sender & Label Info').item.json.dateReceived }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "mode": "id",
+          "value": "={{ $('Label Folder Resolved').item.json.id }}"
+        },
+        "options": {}
+      },
+      "id": "5dcbd8f5-68c1-409d-8a2f-2d1356435fa9",
+      "name": "Create Date Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        80,
+        1328
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $('Extract Sender & Label Info').item.json.senderName }}",
+        "filter": {
+          "folderId": {
+            "mode": "id",
+            "value": "={{ $json.id }}"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "id": "95068b82-47b1-4e5f-ad8f-f70a3d2e8d40",
+      "name": "Search Sender Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        320,
+        1216
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond4",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4b27c243-1735-4293-9867-002553fea7bd",
+      "name": "Sender Folder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Extract Sender & Label Info').item.json.senderName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "mode": "id",
+          "value": "={{ $('Date Folder Resolved').item.json.id }}"
+        },
+        "options": {}
+      },
+      "id": "ccca3010-a3d7-48b3-8ee6-578b5855346b",
+      "name": "Create Sender Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        800,
+        1328
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\nconst items = $input.all();\n\nfor (let i = 0; i < items.length; i++) {\n  const folderId = items[i].json.id;\n  const extractItem = $('Extract Sender & Label Info').itemMatching(i);\n  const binaryKeys = Object.keys(extractItem.binary || {});\n\n  for (const key of binaryKeys) {\n    const bin = extractItem.binary[key];\n    output.push({\n      json: {\n        fileName: (bin && bin.fileName) || `${key}.dat`,\n        folderId\n      },\n      binary: { data: bin }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "id": "9fb842f0-ae0d-425b-94e0-5b10a2946ed0",
+      "name": "Prepare Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "mode": "id",
+          "value": "={{ $json.folderId }}"
+        },
+        "options": {}
+      },
+      "id": "4faaf520-ede3-4400-b6e8-3ff52d71b31c",
+      "name": "Upload Attachment to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1264,
+        1216
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3akILczqrAsBx2q0",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { id: $json.id }, binary: $binary };"
+      },
+      "id": "2c7644b4-4905-45d5-95c8-33726d18065d",
+      "name": "Label Folder Resolved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { id: $json.id }, binary: $binary };"
+      },
+      "id": "f99a9db6-1334-40f4-b587-23da0d77590b",
+      "name": "Date Folder Resolved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "label:Invoices",
+          "readStatus": "both"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "id": "06bcae95-8fc9-4655-bcbe-64ba90fdc758",
+      "name": "Gmail Trigger - Invoices",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2224,
+        1280
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "657hDyiCeeZ6f8Dv",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger - Receipts": {
+      "main": [
+        [
+          {
+            "node": "Tag Receipts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger - Contracts": {
+      "main": [
+        [
+          {
+            "node": "Tag Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Invoices": {
+      "main": [
+        [
+          {
+            "node": "Merge - Combine Labeled Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Receipts": {
+      "main": [
+        [
+          {
+            "node": "Merge - Combine Labeled Emails",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tag Contracts": {
+      "main": [
+        [
+          {
+            "node": "Merge - Combine Labeled Emails",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge - Combine Labeled Emails": {
+      "main": [
+        [
+          {
+            "node": "Extract Sender & Label Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Sender & Label Info": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Has Attachments?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Attachments?": {
+      "main": [
+        [
+          {
+            "node": "Search Label Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Attachments - End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Label Folder": {
+      "main": [
+        [
+          {
+            "node": "Label Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label Folder Exists?": {
+      "main": [
+        [
+          {
+            "node": "Label Folder Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Label Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Label Folder": {
+      "main": [
+        [
+          {
+            "node": "Label Folder Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Date Folder": {
+      "main": [
+        [
+          {
+            "node": "Date Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date Folder Exists?": {
+      "main": [
+        [
+          {
+            "node": "Date Folder Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Date Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Date Folder": {
+      "main": [
+        [
+          {
+            "node": "Date Folder Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Sender Folder": {
+      "main": [
+        [
+          {
+            "node": "Sender Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sender Folder Exists?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Sender Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Sender Folder": {
+      "main": [
+        [
+          {
+            "node": "Prepare Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Attachments": {
+      "main": [
+        [
+          {
+            "node": "Upload Attachment to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label Folder Resolved": {
+      "main": [
+        [
+          {
+            "node": "Search Date Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date Folder Resolved": {
+      "main": [
+        [
+          {
+            "node": "Search Sender Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger - Invoices": {
+      "main": [
+        [
+          {
+            "node": "Tag Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "98450771-6569-45bc-a47d-e7409cb89b60",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "982133a88ce6d6cda1c49e664427962b74260ca32af2b85e7026c5ab94959c7e"
+  },
+  "nodeGroups": [],
+  "id": "3qvSCCalYYEVGOSv",
+  "tags": []
+}
