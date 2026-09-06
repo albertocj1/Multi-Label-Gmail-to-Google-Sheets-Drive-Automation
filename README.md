@@ -4,6 +4,10 @@ An n8n workflow that monitors a Gmail inbox across multiple labels, logs incomin
 
 ![Workflow overview](workflow-overview.png)
 
+## Demo Video
+
+[Watch a walkthrough](https://drive.google.com/file/d/1thr2ubobUQX-ORGvnXoJsmxaGblf6I7b/view?usp=sharing)
+
 ## Live Examples
 
 - 📊 [View the Google Sheet](https://docs.google.com/spreadsheets/d/1r3PEzvA6geWtYVOoZV37VK-Ridy2AnU5WBxTPbvprW4/edit?usp=sharing)
